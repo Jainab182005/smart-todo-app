@@ -5,6 +5,12 @@
 <title>Smart To-Do Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2563eb">
+  
+  
+  
 <style>
 :root {
   --bg: linear-gradient(135deg, #dbeafe, #fce7f3);
@@ -178,6 +184,15 @@ li.done { opacity: 0.5; text-decoration: line-through; }
 </div>
 
 <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+
+
+
+<script>
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 let filter = "all";
 
@@ -264,3 +279,4 @@ render();
 
 </body>
 </html>
+
