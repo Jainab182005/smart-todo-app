@@ -2,26 +2,32 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Smart To-Do App</title>
+<title>Smart To-Do Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 :root {
-  --bg: #f4f6fb;
+  --bg: linear-gradient(135deg, #dbeafe, #fce7f3);
   --card: #ffffff;
-  --text: #333;
-  --primary: #4f46e5;
+  --text: #1f2937;
+  --primary: #2563eb;
+  --low: #22c55e;
+  --medium: #f59e0b;
+  --high: #ef4444;
 }
 
 body.dark {
-  --bg: #0f172a;
-  --card: #1e293b;
-  --text: #f8fafc;
+  --bg: linear-gradient(135deg, #020617, #0f172a);
+  --card: #020617;
+  --text: #e5e7eb;
+  --primary: #38bdf8;
 }
+
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: "Segoe UI", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   display: flex;
@@ -31,11 +37,11 @@ body {
 }
 
 .app {
-  width: 360px;
+  width: 420px;
   background: var(--card);
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  border-radius: 22px;
+  padding: 22px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.25);
 }
 
 .header {
@@ -44,61 +50,93 @@ body {
   align-items: center;
 }
 
-.header h2 {
-  margin: 0;
-}
+.toggle { cursor: pointer; font-size: 1.3rem; }
 
-.toggle {
-  cursor: pointer;
+.stats {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-top: 4px;
 }
 
 .input-group {
   display: flex;
-  gap: 5px;
-  margin-top: 15px;
+  gap: 6px;
+  margin-top: 14px;
 }
 
 input, select {
-  flex: 1;
-  padding: 8px;
+  padding: 9px;
+  border-radius: 10px;
+  border: 1px solid #c7d2fe;
+  outline: none;
 }
 
 button {
   background: var(--primary);
-  border: none;
   color: white;
-  padding: 8px 12px;
+  border: none;
+  padding: 9px 14px;
+  border-radius: 10px;
   cursor: pointer;
-  border-radius: 5px;
+}
+
+.filters {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.filters button {
+  flex: 1;
+  background: #e5e7eb;
+  color: #111;
+}
+
+.filters button.active {
+  background: var(--primary);
+  color: white;
 }
 
 ul {
   list-style: none;
   padding: 0;
-  margin-top: 15px;
+  margin-top: 14px;
 }
 
 li {
-  background: var(--bg);
-  padding: 8px;
-  border-radius: 6px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
+  background: rgba(255,255,255,0.85);
+  border-left: 5px solid;
+  padding: 10px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  animation: fade 0.3s ease;
 }
 
-li.done span {
-  text-decoration: line-through;
-  opacity: 0.6;
+body.dark li { background: #020617; }
+
+@keyframes fade {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+li.done { opacity: 0.5; text-decoration: line-through; }
+
+.task-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
 }
 
 .actions button {
-  margin-left: 4px;
   background: transparent;
   color: var(--text);
-  border: none;
-  cursor: pointer;
+  font-size: 1rem;
+}
+
+.empty {
+  text-align: center;
+  opacity: 0.6;
+  margin-top: 20px;
 }
 </style>
 </head>
@@ -107,35 +145,54 @@ li.done span {
 
 <div class="app">
   <div class="header">
-    <h2>📝 Smart To-Do</h2>
+    <h2>✅ Smart To-Do Pro</h2>
     <span class="toggle" onclick="toggleDark()">🌙</span>
   </div>
 
+  <div class="stats" id="stats"></div>
+
   <div class="input-group">
-    <input id="taskInput" placeholder="New task">
-    <select id="category">
-      <option>Work</option>
-      <option>Study</option>
-      <option>Personal</option>
+    <input id="taskInput" placeholder="Task">
+    <input type="date" id="date">
+  </div>
+
+  <div class="input-group">
+    <select id="priority">
+      <option value="low">Low</option>
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
     </select>
-    <button onclick="addTask()">+</button>
+    <button onclick="addTask()">Add</button>
+  </div>
+
+  <div class="filters">
+    <button class="active" onclick="setFilter('all')">All</button>
+    <button onclick="setFilter('active')">Active</button>
+    <button onclick="setFilter('done')">Done</button>
   </div>
 
   <ul id="taskList"></ul>
+  <div class="empty" id="empty">No tasks yet 🎉</div>
+
+  <button style="margin-top:10px;width:100%" onclick="clearDone()">Clear Completed</button>
 </div>
 
 <script>
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+let filter = "all";
 
 function save() {
   localStorage.setItem("tasks", JSON.stringify(tasks));
 }
 
 function addTask() {
-  const text = taskInput.value.trim();
-  if (!text) return;
-
-  tasks.push({ text, cat: category.value, done: false });
+  if (!taskInput.value.trim()) return;
+  tasks.push({
+    text: taskInput.value,
+    date: date.value,
+    priority: priority.value,
+    done: false
+  });
   taskInput.value = "";
   save();
   render();
@@ -147,30 +204,49 @@ function toggleDone(i) {
   render();
 }
 
-function editTask(i) {
-  const newText = prompt("Edit task", tasks[i].text);
-  if (newText) {
-    tasks[i].text = newText;
-    save();
-    render();
-  }
-}
-
 function deleteTask(i) {
   tasks.splice(i, 1);
   save();
   render();
 }
 
+function clearDone() {
+  tasks = tasks.filter(t => !t.done);
+  save();
+  render();
+}
+
+function setFilter(f) {
+  filter = f;
+  document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
+  event.target.classList.add("active");
+  render();
+}
+
 function render() {
   taskList.innerHTML = "";
-  tasks.forEach((t, i) => {
+  let shown = tasks.filter(t =>
+    filter === "all" ||
+    (filter === "active" && !t.done) ||
+    (filter === "done" && t.done)
+  );
+
+  empty.style.display = shown.length ? "none" : "block";
+
+  let doneCount = tasks.filter(t => t.done).length;
+  stats.textContent = `Total: ${tasks.length} | Done: ${doneCount} | Pending: ${tasks.length - doneCount}`;
+
+  shown.forEach((t, i) => {
     const li = document.createElement("li");
+    li.style.borderColor = `var(--${t.priority})`;
     if (t.done) li.classList.add("done");
     li.innerHTML = `
-      <span onclick="toggleDone(${i})">${t.text} <small>(${t.cat})</small></span>
+      <div class="task-head">
+        <strong onclick="toggleDone(${i})">${t.text}</strong>
+        <span>${t.date || ""}</span>
+      </div>
       <div class="actions">
-        <button onclick="editTask(${i})">✏</button>
+        <button onclick="toggleDone(${i})">✔</button>
         <button onclick="deleteTask(${i})">🗑</button>
       </div>`;
     taskList.appendChild(li);
@@ -179,6 +255,8 @@ function render() {
 
 function toggleDark() {
   document.body.classList.toggle("dark");
+  document.querySelector(".toggle").textContent =
+    document.body.classList.contains("dark") ? "☀️" : "🌙";
 }
 
 render();
